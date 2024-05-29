@@ -15,9 +15,9 @@ public class RandomPosition {
 		
 		for(Student student : students) {
 			while(true) {
-				int first = rand.nextInt(numOfDivision); 4
-				int second = rand.nextInt(numOfRows); 2
-				int third = rand.nextInt(numOfColumns); 5
+				int first = rand.nextInt(numOfDivision); 
+				int second = rand.nextInt(numOfRows); 
+				int third = rand.nextInt(numOfColumns); 
 				
 				Seat temp = divisionArrayList.get(first).getDetailOfDivision()[second][third];
 				
