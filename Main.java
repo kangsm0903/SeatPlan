@@ -1,72 +1,124 @@
 package JavaProject;
 
-import java.util.ArrayList;
+import javax.swing.*;
+import java.awt.*;
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import javax.swing.*;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+
+import static java.lang.System.exit;
 
 public class Main {
+    enum gender{MALE, FEMALE};
+    enum seatVer{MIXED, NORMAL};
+    static JTextField divisionField;
+    static JTextField rowsField;
+    static JTextField columnsField;
+    static JCheckBox mixedVerCheckbox;
+    static JCheckBox normalVerCheckbox;
+    static JPanel inputPanel;
+    static int result;
+    static Classroom classroom;
+    static GUI gui;
+    static ArrayList<Student> students;
+    static String filePath;
+    static boolean isReadyToStart;
+
+    static void getInputFromGUI(){
+        divisionField = new JTextField(5);
+        rowsField = new JTextField(5);
+        columnsField = new JTextField(5);
+
+        mixedVerCheckbox = new JCheckBox("Mixed Version");
+        normalVerCheckbox = new JCheckBox("Normal Version");
+
+        inputPanel = new JPanel();
+        inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.Y_AXIS));
+        inputPanel.add(new JLabel("분단 수를 입력하세요."));
+        inputPanel.add(divisionField);
+        inputPanel.add(new JLabel("분단의 가로 칸 수를 입력하세요."));
+        inputPanel.add(columnsField);
+        inputPanel.add(new JLabel("분단의 세로 칸 수를 입력하세요."));
+        inputPanel.add(rowsField);
+
+        inputPanel.add(new JLabel("체크박스를 선택하세요."));
+        inputPanel.add(mixedVerCheckbox);
+        inputPanel.add(normalVerCheckbox);
+
+        result = JOptionPane.showConfirmDialog(null, inputPanel, "분단 정보 입력", JOptionPane.OK_CANCEL_OPTION); // 사용자에게 팝업창을 띄움
+        if (result == JOptionPane.OK_OPTION) { // 사용자가 OK를 누른 경우 입력된 값을 읽어
+            try{
+                doWhatUserWants();
+            } catch (NumberFormatException e){
+                JOptionPane.showMessageDialog(null, "Please enter a valid number."); students = new ArrayList<>(); getInputFromGUI();
+            } catch (WrongFormatInputFile | IllegalArgumentException e) {
+                JOptionPane.showMessageDialog(null, "Please match the format of input file and restart the program."); exit(0);
+            } catch(OverAcceptance e){
+                JOptionPane.showMessageDialog(null, "Please allocate sufficient seats for your classroom."); students = new ArrayList<>(); getInputFromGUI();
+            } catch(NotSelectedOption e){
+                JOptionPane.showMessageDialog(null, "Please select a valid option.");  students = new ArrayList<>(); getInputFromGUI();
+            } catch(OverSelectedOption e){
+                JOptionPane.showMessageDialog(null, "Please select only one option.");  students = new ArrayList<>(); getInputFromGUI();
+            } catch (FileNotFoundException e){
+                JOptionPane.showMessageDialog(null, "'input.txt' file is not found. Change the file name or move it to specified folder"); exit(0);
+            }  catch (IOException e) { e.printStackTrace(); }
+        }
+    }
+
+    static void doWhatUserWants() throws OverAcceptance, NotSelectedOption, OverSelectedOption, IOException, WrongFormatInputFile, IllegalArgumentException {
+        int divisionNum, rowNum, colNum;
+        try {
+            divisionNum = Integer.parseInt(divisionField.getText());
+            rowNum = Integer.parseInt(rowsField.getText());
+            colNum = Integer.parseInt(columnsField.getText());
+        } finally {}
+
+        //get students info from input.txt
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(" ");    // 띄어쓰기 기준으로 분할
+                if (parts.length == 2) {
+                    String name = parts[0];
+                    gender myGender;
+                    switch (parts[1]) {
+                        case "남": myGender = gender.MALE; break;
+                        case "여": myGender = gender.FEMALE; break;
+                        default: throw new WrongFormatInputFile();
+                    }
+                    students.add(new Student(name, myGender));
+                }  else {throw new WrongFormatInputFile();}
+            }
+        }
+        // 입력한 자릿수보다 학생들의 수가 더 많을 때 사용자 정의 에러 반환
+        if (students.size() > divisionNum * colNum * rowNum) { throw new OverAcceptance(); }
+
+        classroom = new Classroom(divisionNum, rowNum, colNum);
+        gui = new GUI(classroom, students, rowNum, colNum);
+        while(!isReadyToStart){
+            if(!mixedVerCheckbox.isSelected() && !normalVerCheckbox.isSelected()) { throw new NotSelectedOption(); }
+            else if(mixedVerCheckbox.isSelected() && normalVerCheckbox.isSelected()) { throw new OverSelectedOption(); }
+            else if(mixedVerCheckbox.isSelected()) { isReadyToStart = true; gui.start(seatVer.MIXED); }
+            else { isReadyToStart = true; gui.start(seatVer.NORMAL);}
+        }
+    }
+
     public static void main(String[] args) {
 
-    	String filePath = "input.txt"; // 파일 경로를 여기에 입력하세요
-        ArrayList<Student> students = new ArrayList<>();
-        int numOfStudent=0; // 학생 수 
-        
-        // GUI에서 값을 입력받음 
-        
-        JTextField divisionField = new JTextField(5);
-        JTextField rowsField = new JTextField(5);
-        JTextField columnsField = new JTextField(5);
+        filePath = "input.txt"; // 파일 경로를 여기에 입력하세요
+        students = new ArrayList<>();
+        isReadyToStart = false;
 
-        JPanel inputPanel = new JPanel();
-        inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.Y_AXIS));
-        inputPanel.add(new JLabel("분단 수를 입력하세요:"));
-        inputPanel.add(divisionField);
-        inputPanel.add(new JLabel("분단의 가로 칸 수를 입력하세요:"));
-        inputPanel.add(rowsField);
-        inputPanel.add(new JLabel("분단의 세로 칸 수를 입력하세요:"));
-        inputPanel.add(columnsField);
+        // GUI에서 값을 입력받음
+        getInputFromGUI();
 
-        int result = JOptionPane.showConfirmDialog(null, inputPanel, "분단 정보 입력", JOptionPane.OK_CANCEL_OPTION); // 사용자에게 팝업창을 띄움
-        
-        if (result == JOptionPane.OK_OPTION) { // 사용자가 OK를 누른 경우 입력된 값을 읽어
-            int numOfDivision = Integer.parseInt(divisionField.getText());
-            int numOfRows = Integer.parseInt(rowsField.getText());
-            int numOfColumns = Integer.parseInt(columnsField.getText());
-            
-	        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-	            String line;
-	            while ((line = br.readLine()) != null) {
-	                String[] parts = line.split(" "); 	// 띄어쓰기 기준으로 분할 
-	                if (parts.length == 2) {
-	                    String name = parts[0];			
-	                    boolean gender = parts[1].equals("남");	// 1 == 남, 0 == 여
-	                    students.add(new Student(gender, name));// 학생 배열에 학생들 추가 
-	                    numOfStudent++;
-	                }
-	            }
-	        } catch (IOException e) {
-	            e.printStackTrace();
-	        }
-        
-	        if(numOfStudent > numOfDivision * numOfRows * numOfColumns) {
-	        	// 입력한 자릿수보다 학생들의 수가 더 많을 때 사용자 정의 에러 반환 및 종료
-	        	System.exit(0);
-	        } 
-	        
-	        // classroom(총 학생, 분단 수, 분단 가로, 분단 세로, 학생정보)
-	        // 자리 설정 
-	        Classroom classroom = new Classroom(numOfStudent, numOfDivision, numOfRows, numOfColumns);
-	        
-	        // 시작 버튼
-	        
-	        // 랜덤 배치 
-	        RandomPosition random = new RandomPosition(classroom.getDivisionArrayList(), students, numOfDivision, numOfRows, numOfColumns);
-	        
-	        // GUI 
-	        GUI gui = new GUI(classroom.getDivisionArrayList(), numOfRows, numOfColumns);
-	        
-	    }
-	}
+
+    }
+    static class WrongFormatInputFile extends Exception{}
+    static class OverAcceptance extends Exception{}
+    static class NotSelectedOption extends Exception{}
+    static class OverSelectedOption extends Exception{}
 }
